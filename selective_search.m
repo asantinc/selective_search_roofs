@@ -1,4 +1,4 @@
-function all_boxes = selective_search(image_filenames, output_filename)
+function all_boxes = selective_search(image_filenames, output_filename, k, scale)
 
 addpath('Dependencies');
 
@@ -23,9 +23,9 @@ simFunctionHandles = simFunctionHandles(1:2); % Two different merging strategies
 
 % Thresholds for the Felzenszwalb and Huttenlocher segmentation algorithm.
 % Note that by default, we set minSize = k, and sigma = 0.8.
-k = 200; % controls size of segments of initial segmentation.
+k = k; %200; % controls size of segments of initial segmentation.
 minSize = k;
-sigma = 0.8;
+sigma = scale; %0.8;
 
 % Process all images.
 all_boxes = {};

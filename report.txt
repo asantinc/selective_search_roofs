@@ -1,0 +1,60 @@
+Total Detection Time:		56.4712369442
+Roof type: metal
+Total roofs	Detections	Recall	Precision	F1 score	
+87		2926		0.310344827586		0.00922761449077		0.0179223365417
+
+Roof type: thatch
+Total roofs	Detections	Recall	Precision	F1 score	
+89		2926		0.23595505618		0.00717703349282		0.0139303482587
+
+
+
+
+Total Detection Time:		58.4590768814
+Roof type: metal
+Total roofs	Detections	Recall	Precision	F1 score	
+87		5506		0.379310344828		0.00599346167817		0.0118004648668
+
+Roof type: thatch
+Total roofs	Detections	Recall	Precision	F1 score	
+89		5506		0.505617977528		0.00817290228841		0.0160857908847
+
+
+
+
+Total Detection Time:		65.1877090931
+Roof type: metal
+Total roofs	Detections	Recall	Precision	F1 score	
+87		7464		0.436781609195		0.0050911039657		0.0100648920673
+
+Roof type: thatch
+Total roofs	Detections	Recall	Precision	F1 score	
+89		7464		0.550561797753		0.00656484458735		0.0129749768304
+
+
+
+
+Total Detection Time:		69.184732914
+Roof type: metal
+Total roofs	Detections	Recall	Precision	F1 score	
+87		14059		0.471264367816		0.00291628138559		0.00579669164428
+
+Roof type: thatch
+Total roofs	Detections	Recall	Precision	F1 score	
+89		14059		0.629213483146		0.00398321359983		0.00791631325982
+
+
+
+
+Total Detection Time:		83.0984280109
+Roof type: metal
+Total roofs	Detections	Recall	Precision	F1 score	
+87		23890		0.666666666667		0.00242779405609		0.00483796972098
+
+Roof type: thatch
+Total roofs	Detections	Recall	Precision	F1 score	
+89		23890		0.76404494382		0.00284637923817		0.00567162934234
+
+
+
+

@@ -1,0 +1,12 @@
+Total Detection Time:		88.4890739918
+Roof type: metal
+Total roofs	Detections	Recall	Precision	F1 score	
+87		29545		0.563218390805		0.00165848705365		0.00330723542117
+
+Roof type: thatch
+Total roofs	Detections	Recall	Precision	F1 score	
+89		29545		0.898876404494		0.00270773396514		0.00539920361747
+
+
+
+
