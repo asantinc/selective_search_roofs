@@ -1,0 +1,49 @@
+***************METAL*******************
+Ranked by: RECALL
+Roofs	Detections	Recall	Precision	F1_score	Total time	Folder Name
+87	100301	    0.8966	    0.0008	    0.0016	    278.38	output_k100_scale0.8_simall_colorall
+87	66644	    0.7701	    0.0010	    0.0020	    179.18	output_k150_scale0.8_simall_colorall
+87	50013	    0.7011	    0.0012	    0.0024	    135.94	output_k200_scale0.8_simall_colorall
+87	39535	    0.6782	    0.0015	    0.0030	    120.46	output_k250_scale0.8_simall_colorall
+87	21566	    0.5747	    0.0023	    0.0046	     56.76	output_k275_scale0.8_sim2_colorhsv
+87	29545	    0.5632	    0.0017	    0.0033	     88.49	output_k200_scale0.8_sim2_colorhsv
+87	23611	    0.5517	    0.0020	    0.0041	     79.94	output_k250_scale0.8_sim2_colorhsv
+87	19813	    0.4138	    0.0018	    0.0036	     75.73	output_k300_scale0.8_sim2_colorhsv
+
+
+Ranked by: F1
+Roofs	Detections	Recall	Precision	F1_score	Total time	Folder Name
+87	21566	    0.5747	    0.0023	    0.0046	     56.76	output_k275_scale0.8_sim2_colorhsv
+87	23611	    0.5517	    0.0020	    0.0041	     79.94	output_k250_scale0.8_sim2_colorhsv
+87	19813	    0.4138	    0.0018	    0.0036	     75.73	output_k300_scale0.8_sim2_colorhsv
+87	29545	    0.5632	    0.0017	    0.0033	     88.49	output_k200_scale0.8_sim2_colorhsv
+87	39535	    0.6782	    0.0015	    0.0030	    120.46	output_k250_scale0.8_simall_colorall
+87	50013	    0.7011	    0.0012	    0.0024	    135.94	output_k200_scale0.8_simall_colorall
+87	66644	    0.7701	    0.0010	    0.0020	    179.18	output_k150_scale0.8_simall_colorall
+87	100301	    0.8966	    0.0008	    0.0016	    278.38	output_k100_scale0.8_simall_colorall
+
+
+***************THATCH*******************
+Ranked by: RECALL
+Roofs	Detections	Recall	Precision	F1_score	Total time	Folder Name
+89	100301	    0.9775	    0.0009	    0.0017	    278.38	output_k100_scale0.8_simall_colorall
+89	66644	    0.9213	    0.0012	    0.0025	    179.18	output_k150_scale0.8_simall_colorall
+89	50013	    0.8989	    0.0016	    0.0032	    135.94	output_k200_scale0.8_simall_colorall
+89	29545	    0.8989	    0.0027	    0.0054	     88.49	output_k200_scale0.8_sim2_colorhsv
+89	23611	    0.8539	    0.0032	    0.0064	     79.94	output_k250_scale0.8_sim2_colorhsv
+89	39535	    0.8539	    0.0019	    0.0038	    120.46	output_k250_scale0.8_simall_colorall
+89	21566	    0.8539	    0.0035	    0.0070	     56.76	output_k275_scale0.8_sim2_colorhsv
+89	19813	    0.8090	    0.0036	    0.0072	     75.73	output_k300_scale0.8_sim2_colorhsv
+
+
+Ranked by: F1
+Roofs	Detections	Recall	Precision	F1_score	Total time	Folder Name
+89	19813	    0.8090	    0.0036	    0.0072	     75.73	output_k300_scale0.8_sim2_colorhsv
+89	21566	    0.8539	    0.0035	    0.0070	     56.76	output_k275_scale0.8_sim2_colorhsv
+89	23611	    0.8539	    0.0032	    0.0064	     79.94	output_k250_scale0.8_sim2_colorhsv
+89	29545	    0.8989	    0.0027	    0.0054	     88.49	output_k200_scale0.8_sim2_colorhsv
+89	39535	    0.8539	    0.0019	    0.0038	    120.46	output_k250_scale0.8_simall_colorall
+89	50013	    0.8989	    0.0016	    0.0032	    135.94	output_k200_scale0.8_simall_colorall
+89	66644	    0.9213	    0.0012	    0.0025	    179.18	output_k150_scale0.8_simall_colorall
+89	100301	    0.9775	    0.0009	    0.0017	    278.38	output_k100_scale0.8_simall_colorall
+

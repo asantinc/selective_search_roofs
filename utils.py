@@ -42,7 +42,7 @@ ROOF_TYPES = ['metal', 'thatch']
 #VIOLA TRAINING
 ###################################
 #Viola constants
-RECTIFIED_COORDINATES = '../data_original/bounding_inhabited/'
+RECTIFIED_COORDINATES = '/afs/inf.ed.ac.uk/group/ANC/s0839470/data_original/bounding_inhabited/'
 UNINHABITED_PATH = '../data/source/uninhabited/'
 BG_FILE = '../viola_jones/bg.txt'
 DAT_PATH = '../viola_jones/all_dat/'
@@ -105,9 +105,10 @@ def mkdir(out_folder_path=None, confirm=False):
                 sys.exit(-1)
         subprocess.check_call('mkdir {0}'.format(out_folder_path), shell=True)
     else:
-        overwrite = raw_input('Folder {0} exists; overwrite, y or n?'.format(out_folder_path))
-        if overwrite == 'n':
-            sys.exit(-1)
+        if confirm:
+            overwrite = raw_input('Folder {0} exists; overwrite, y or n?'.format(out_folder_path))
+            if overwrite == 'n':
+                sys.exit(-1)
     print 'The following folder has been created: {0}'.format(out_folder_path)
 
 
@@ -121,7 +122,7 @@ def check_append(path_being_constructed, addition):
 
 
 def get_path(in_or_out=None, out_folder_name=None, params=False, full_dataset=False, 
-                    pipe=False, viola=False, template=False, neural=False, neural_weights=False, data_fold=None):
+                    selective=False, pipe=False, viola=False, template=False, neural=False, neural_weights=False, data_fold=None):
     '''
     Return path to either input, output or parameter files. If a folder does not exit, ask user for confirmation and create it
     '''
@@ -175,6 +176,8 @@ def get_path(in_or_out=None, out_folder_name=None, params=False, full_dataset=Fa
                 check_append(path,'neural/')
             elif pipe:
                 check_append(path,'pipe/')
+            elif selective:
+                check_append(path,'selective/')
             else:
                 raise ValueError('Cannot create path. Try setting viola, pipe, template or neural to True to get a path')
             
@@ -309,8 +312,18 @@ def add_padding_polygon(polygon, bitmap, padding=10):
     min_area_rect = cv2.minAreaRect(contours[0]) # rect = ((center_x,center_y),(width,height),angle)
     #convert to list so you can change the value of the width and height
     min_area_rect_list = [list(x) if type(x) is tuple else x for x in min_area_rect] 
-    min_area_rect_list[1][0] += padding 
-    min_area_rect_list[1][1] += padding 
+
+    height = min_area_rect_list[1][1]
+    width = min_area_rect_list[1][0]
+    center_x = min_area_rect_list[0][0]
+    center_y = min_area_rect_list[0][1]
+    bitmap_height, bitmap_width = bitmap.shape
+
+    #only add padding if it doens't go off the image
+    if center_x+(width/2)+padding < bitmap_width and center_x-(width/2)-padding >= 0 and center_y+(height/2)+padding < bitmap_height and center_y-(height/2)-padding >= 0:
+        min_area_rect_list[1][0] += padding 
+        min_area_rect_list[1][1] += padding 
+
     #convert back to tuple
     cnt = tuple(tuple(x) if type(x) is list else x for x in min_area_rect_list)#, dtype=np.int32)
     min_poly_padded = np.int0(cv2.cv.BoxPoints(cnt))

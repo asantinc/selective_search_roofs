@@ -85,7 +85,6 @@ def main():
             paths.append(('./', folder))
 
     #print viola_paths
-    pdb.set_trace()
     process_reports(paths)
 
 

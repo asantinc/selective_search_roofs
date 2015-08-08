@@ -7,18 +7,16 @@ import pdb
 import getopt
 import numpy as np
 import scipy.io
-import cv2
-import cPickle as pickle
 
 from reporting import Evaluation, Detections
 import utils
 from timer import Timer
-from collections import defaultdict
 
 
+script_dirname = os.path.abspath(os.path.dirname(__file__))
 
 
-def get_windows(image_fnames, script_dirname, cmd='selective_search', k=200, scale=1.08):
+def get_windows(image_fnames, cmd='selective_search', k=200, scale=1.08):
     """
     Run MATLAB Selective Search code on the given image filenames to
     generate window proposals.
@@ -95,7 +93,7 @@ def selectionboxes2polygons(boxes):
     return polygons
 
 def get_parameters():
-    k = 300 
+    k = 150
     scale = 0.8 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "k:s:")
@@ -111,16 +109,16 @@ def get_parameters():
 
 
 
-def save_training_FP_and_TP_helper(img_name,evaluation, detections, patches_path, general_path, img, roof_type, extraction_type, color):
+def save_training_FP_and_TP_helper(img_name, detections, patches_path, general_path, img, roof_type, extraction_type, color):
     #this is where we write the detections we're extraction. One image per roof type
     #we save: 1. the patches and 2. the image with marks of what the detections are, along with the true roofs (for debugging)
     img_debug = np.copy(img) 
 
     if roof_type == 'background':
-        utils.draw_detections(evaluation.correct_roofs['metal'][img_name], img_debug, color=(0, 0, 0), thickness=2)
-        utils.draw_detections(evaluation.correct_roofs['thatch'][img_name], img_debug, color=(0, 0, 0), thickness=2)
+        utils.draw_detections(self.evaluation.correct_roofs['metal'][img_name], img_debug, color=(0, 0, 0), thickness=2)
+        utils.draw_detections(self.evaluation.correct_roofs['thatch'][img_name], img_debug, color=(0, 0, 0), thickness=2)
     else:
-        utils.draw_detections(evaluation.correct_roofs[roof_type][img_name], img_debug, color=(0, 0, 0), thickness=2)
+        utils.draw_detections(self.evaluation.correct_roofs[roof_type][img_name], img_debug, color=(0, 0, 0), thickness=2)
 
     for i, detection in enumerate(detections):
         #extract the patch, rotate it to a horizontal orientation, save it
@@ -138,10 +136,9 @@ def save_training_FP_and_TP_helper(img_name,evaluation, detections, patches_path
 
 
 
-def save_training_TP_FP_using_voc(evaluation, img_names, in_path, out_folder_name=None, neg_thresh=0.3):
+def save_training_TP_FP_using_voc(self, evaluation, img_names, in_path, out_folder_name, neg_thresh=0.3):
     '''use the voc scores to decide if a patch should be saved as a TP or FP or not
     '''
-    assert out_folder_name is not None
     general_path = utils.get_path(neural=True, data_fold=utils.TRAINING, in_or_out=utils.IN, out_folder_name=out_folder_name)
     path_true = general_path+'truepos_from_selective_search/'
     utils.mkdir(path_true)
@@ -153,73 +150,70 @@ def save_training_TP_FP_using_voc(evaluation, img_names, in_path, out_folder_nam
         good_detections = defaultdict(list)
         bad_detections = defaultdict(list)
         try:
-            img = cv2.imread(in_path+img_name, flags=cv2.IMREAD_COLOR)
+            if viola: #viola training will need grayscale patches
+                img = cv2.imread(in_path+img_name, flags=cv2.IMREAD_COLOR)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                img = cv2.equalizeHist(img)
+            else: #neural network will need RGB
+                img = cv2.imread(in_path+img_name, flags=cv2.IMREAD_COLOR)
         except:
             print 'Cannot open image'
             sys.exit(-1)
 
         for roof_type in utils.ROOF_TYPES:
-            detection_scores = evaluation.detections.best_score_per_detection[img_name][roof_type]
+            detection_scores = detections.best_score_per_detection[img_name][roof_type]
             for detection, score in detection_scores:
                 if score > 0.5:
                     #true positive
                     good_detections[roof_type].append(detection)
-                if score < neg_thresh:
+                if score < neg_thres:
                     #false positive
                     bad_detections[roof_type].append(detection)
                 
         for roof_type in utils.ROOF_TYPES:
             extraction_type = 'good'
-            save_training_FP_and_TP_helper(img_name, evaluation, good_detections[roof_type], path_true, general_path, img, roof_type, extraction_type, (0,255,0))               
+            save_training_FP_and_TP_helper(img_name, good_detections[roof_type], path_true, general_path, img, roof_type, extraction_type, (0,255,0))               
             extraction_type = 'background'
-            save_training_FP_and_TP_helper(img_name, evaluation, bad_detections[roof_type], path_false, general_path, img, roof_type, extraction_type, (0,0,255))               
+            save_training_FP_and_TP_helper(img_name, bad_detections[roof_type], path_false, general_path, img, roof_type, extraction_type, (0,0,255))               
 
 
 def copy_images(data_fold):
-    '''
     if data_fold == utils.TRAINING:
         prefix = 'training_'
     elif data_fold == utils.VALIDATION:
         prefix = 'validation_'
-    '''
-    prefix = ''
+
     in_path = utils.get_path(in_or_out = utils.IN, data_fold=data_fold)
+    pdb.set_trace()
     for img_name in os.listdir(in_path):
         if img_name.endswith('jpg') or img_name.endswith('xml'):
             #move the image over and save it with a prefix       
             subprocess.check_call('cp {} {}'.format(in_path+img_name, prefix+img_name), shell=True)
 
-
-def main(): 
-    script_dirname = os.path.abspath(os.path.dirname(__file__))
-    output_patches = True
-    fold = utils.TRAINING if output_patches else utils.VALIDATION
-    
-    #only use this path to get the names of the files you want to use
-    in_path = utils.get_path(in_or_out=utils.IN, data_fold=fold)
-    in_path_selective = script_dirname+'/' #this is where the files actually live
-    img_names = [img for img in os.listdir(in_path) if img.endswith('jpg')]
-    image_filenames = [in_path_selective+img for img in os.listdir(in_path) if img.endswith('jpg')]
-
+if __name__ == '__main__':
+    copy_images(utils.TRAINING)
+    copy_images(utils.VALIDATION)
+    '''
+    img_names = [img for img in os.listdir(script_dirname) if img.endswith('jpg')]
+    image_filenames = [script_dirname+'/'+img for img in os.listdir(script_dirname) if img.endswith('jpg') and img.startswith('training_')]
 
     #get the proposals
     k, scale = get_parameters()
-    sim = 'all'
-    color = 'all'
-    folder_name = 'k{}_scale{}_sim{}_color{}/'.format(k, scale, sim, color)
-    print 'Folder name is: {}'.format(folder_name)
+    sim = '2'
+    color = 'hsv'
 
     with Timer() as t:
-        boxes = get_windows(image_filenames, script_dirname, k=k, scale=scale)
+        boxes = get_windows(image_filenames, k=k, scale=scale)
 
     detections = Detections()
     detections.total_time = t.secs
-    out_path = utils.get_path(selective=True, in_or_out=utils.OUT, data_fold=fold, out_folder_name=folder_name)
+    folder_name = 'output_k{}_scale{}_sim{}_color{}/'.format(k, scale, sim, color)
+    utils.mkdir(out_folder_path=folder_name)
 
-    evaluation = Evaluation(#use_corrected_roofs=True,
+    evaluation = Evaluation(use_corrected_roofs=True,
                         report_name='report.txt', method='windows', 
-                        folder_name=folder_name,  out_path=out_path, 
-                        detections=detections, in_path=in_path)
+                        folder_name=folder_name,  out_path=folder_name, 
+                        detections=detections, in_path=script_dirname+'/')
     
     #score the proposals
     for img, proposals in zip(img_names, boxes):
@@ -234,15 +228,6 @@ def main():
 
         evaluation.save_images(img)
 
-    save_training_TP_FP_using_voc(evaluation, img_names, in_path_selective, out_folder_name=folder_name, neg_thresh=0.3)
+    
     evaluation.print_report() 
-
-    with open(out_path+'evaluation.pickle', 'wb') as f:
-        pickle.dump(evaluation, f)
-
-
-if __name__ == '__main__':
-    copy_images(utils.TRAINING)
-    copy_images(utils.VALIDATION)
-    main()
-
+    '''

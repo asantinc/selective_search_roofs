@@ -15,7 +15,7 @@ if(~exist('mexFelzenSegmentIndex'))
 end
 
 colorTypes = {'Hsv', 'Lab', 'RGI', 'H', 'Intensity'};
-colorType = colorTypes{1}; % Single color space for demo
+colorType = colorTypes{1:2}; % Single color space for demo
 
 % Here you specify which similarity functions to use in merging
 simFunctionHandles = {@SSSimColourTextureSizeFillOrig, @SSSimTextureSizeFill, @SSSimBoxFillOrig, @SSSimSize};

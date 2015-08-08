@@ -16,7 +16,6 @@ class Detections(object):
         self.false_positive_num =  defaultdict(int)
         self.true_positive_num =  defaultdict(int)
         self.good_detection_num =  defaultdict(int)
-
         if mergeFalsePos:
             self.bad_detection_num = 0 #we count the metal and thatch false positives together 
         else:
@@ -27,17 +26,11 @@ class Detections(object):
         self.true_positives = dict()
         self.false_positives = dict()
         self.good_detections =dict()#all the detections above the VOC threshold
-        #index with the roof polygon coordinates
-        #stores the best score and detection for each grount true roof
-        self.roof_detections_voc = dict() 
-        self.best_score_per_detection = dict() #keep track of each detection's best voc score with some roof, for each image
-
         if mergeFalsePos:
             self.bad_detections = defaultdict(list) #there's only one set of bad detections
         else:
             self.bad_detections = dict()
         for roof_type in utils.ROOF_TYPES: # we need this to separate them per image
-            self.roof_detections_voc[roof_type] = defaultdict(list)
             self.detections[roof_type] = dict()
             self.true_positives[roof_type] = defaultdict(list)
             self.false_positives[roof_type] = defaultdict(list)
@@ -47,9 +40,6 @@ class Detections(object):
 
         self.total_time = 0
         self.imgs = set()
-
-    def set_best_voc(self,img_name=None, roof_type=None, roof_polygon=None, best_detection=None, score=None):
-        self.roof_detections_voc[roof_type][img_name].append((roof_polygon, best_detection, score))  
 
     def update_true_pos(self, true_pos=None, img_name=None, roof_type=None):
         self.true_positives[roof_type][img_name].extend(true_pos)
@@ -126,7 +116,7 @@ class Evaluation(object):
                         detector_names=None, 
                         mergeFalsePos=False,
                         separateDetections=True,
-                        vocGood=0.1):
+                        vocGood=0.1, use_corrected_roofs=True):
         '''
         Will score the detections class it contains.
 
@@ -151,8 +141,8 @@ class Evaluation(object):
         #threholds to classify detections as False/True positives and Good/Bad detections(these are to train the neural network on it)
         self.VOC_threshold = utils.VOC_threshold #threshold to assign a detection as a true positive
         self.VOC_good_detection_threshold = dict()
-        self.VOC_good_detection_threshold['metal'] = utils.VOC_threshold 
-        self.VOC_good_detection_threshold['thatch'] = utils.VOC_threshold
+        self.VOC_good_detection_threshold['metal'] = vocGood
+        self.VOC_good_detection_threshold['thatch'] = 0.50
         self.detection_portion_threshold = 0.50
 
         self.detections = detections    #detection class
@@ -161,14 +151,22 @@ class Evaluation(object):
         self.img_names = [f for f in listdir(self.in_path) if f.endswith('.jpg')]
 
         #the ground truth roofs for every image and roof type
+        self.use_corrected_roofs = use_corrected_roofs
         self.correct_roofs = dict()
         for roof_type in utils.ROOF_TYPES:
             self.correct_roofs[roof_type] = dict()
         for img_name in self.img_names:
             for roof_type in utils.ROOF_TYPES:
-                self.correct_roofs[roof_type][img_name] = DataLoader.get_polygons(roof_type=roof_type, 
-                                                            xml_name=img_name[:-3]+'xml' , xml_path=self.in_path)
-                self.detections.update_roof_num(self.correct_roofs[roof_type][img_name], roof_type)
+                #decide if you want to use rectified roofs for metal or not
+                if self.use_corrected_roofs:
+                    self.correct_roofs[roof_type][img_name] = DataLoader.get_polygons(roof_type=roof_type, 
+                                                                xml_name=img_name[:-3]+'xml' , xml_path=self.in_path)
+                    self.detections.update_roof_num(self.correct_roofs[roof_type][img_name], roof_type)
+                else:
+                    self.correct_roofs[roof_type][img_name] = DataLoader.get_polygons(roof_type=roof_type, rectified_metal=False, 
+                                                                xml_name=img_name[:-3]+'xml' , xml_path=self.in_path)
+                    self.detections.update_roof_num(self.correct_roofs[roof_type][img_name], roof_type)
+                    
 
         #init the report file
         self.out_path = out_path
@@ -205,11 +203,12 @@ class Evaluation(object):
         '''
         print 'Scoring.....'
         #start with all detections as false pos; as we find matches, we increase the true_pos, decrese the false_pos numbers
+        detections = dict() 
         false_pos_logical = dict()
         bad_detection_logical = dict()
-        best_score_per_detection = defaultdict(list) #for the current image
-        detections = dict()
+        
 
+        detections = dict()
         for roof_type in utils.ROOF_TYPES:
             #this will only be necessary if we work with the neural network
             #and we want to score roofs by merging nearby detections
@@ -228,15 +227,11 @@ class Evaluation(object):
             false_pos_logical[roof_type] = np.ones(len(detections[roof_type]), dtype=bool) #[roof_type]
             bad_detection_logical[roof_type] = np.ones(len(detections[roof_type]), dtype=bool) #[roof_type]
 
-            for r, roof in enumerate(self.correct_roofs[roof_type][img_name]):
+            for roof in self.correct_roofs[roof_type][img_name]:
                 best_voc_score = -1 
                 best_detection = -1 
 
-
-                for d, detection in enumerate(detections[roof_type]):                             #for each patch found
-                    if r == 0:#first roof, so insert the current detection and a negative score
-                        best_score_per_detection[roof_type].append([detection, -1])
-
+                for d, detection in enumerate(detections[roof_type]):  # detections[roof_type]):                           #for each patch found
                     #detection_roof_portion is how much of the detection is covered by roof
                     voc_score, detection_roof_portion = self.get_score(contours=work_with_contours, 
                                                         rows=img_shape[0], cols=img_shape[1], roof=roof, detection=detection)
@@ -244,27 +239,20 @@ class Evaluation(object):
                         best_voc_score = voc_score
                         best_detection = d 
 
-                    if (voc_score > self.VOC_good_detection_threshold[roof_type]): # or detection_roof_portion>self.detection_portion_threshold):
+                    #if self.output_patches:
+                    #depending on roof type we consider a different threshold
+                    if (voc_score > self.VOC_good_detection_threshold[roof_type] or detection_roof_portion>self.detection_portion_threshold):
                         bad_detection_logical[roof_type][d] = 0 #we already know that this wasn't a bad detection
-
-                    if (voc_score > best_score_per_detection[roof_type][d][1]): #keep track of best match with some roof for each detection
-                        best_score_per_detection[roof_type][d][1] = voc_score
-                        
-
-                #store the best detection for this roof regardless of whether it is over 0.5
-                if voc_score > best_voc_score:
-                    self.detections.set_best_voc(img_name=img_name, roof_type=roof_type, roof_polygon=roof, best_detection=detections[roof_type][d], score=best_voc_score)  
 
                 if best_detection != -1:
                     false_pos_logical[roof_type][best_detection] = 0 #this detection is not a false positive
 
-        self.update_scores(img_name, detections, false_pos_logical, bad_detection_logical, best_score_per_detection)
+        self.update_scores(img_name, detections, false_pos_logical, bad_detection_logical)
         self.save_images(img_name)
 
        
 
-    def update_scores(self, img_name, detections, false_pos_logical, bad_detection_logical, best_score_per_detection):
-        self.detections.best_score_per_detection[img_name] = best_score_per_detection
+    def update_scores(self, img_name, detections, false_pos_logical, bad_detection_logical):
 
         if self.mergeFalsePos: #self.output_patches 
             detects = np.array(detections['metal'].extend(detections['thatch']))
@@ -339,7 +327,7 @@ class Evaluation(object):
         return voc_score, detection_roof_portion
 
 
-    def print_report_old(self, write_to_file=True):
+    def print_report(self, write_to_file=True):
         log_to_file = list() 
         print '*************** FINAL REPORT *****************'
         log_to_file.append('Total Detection Time:\t\t{0}'.format(self.detections.total_time))
@@ -371,47 +359,7 @@ class Evaluation(object):
         with open(self.out_path+'report.txt', 'a') as report:
             report.write(log)
  
-    def print_report(self, print_header=True, stage=None, report_name='report.txt', write_to_file=True):
-        '''
-        Parameters:
-        ---------------
-        stage: string
-            can add an additional column to the report for instance, if theres' multiple stages that we want to report in a single file,
-            as is the case of the pipeline detection
-        '''
-        log_to_file = list() 
-        if print_header: 
-            open(self.out_path+report_name, 'w').close() 
-            if stage is None:
-                log_to_file.append('roof_type\ttotal_roofs\ttotal_time\tdetections\trecall\tprecision\tf1')
-            else:
-                log_to_file.append('stage\troof_type\ttotal_roofs\ttotal_time\tdetections\trecall\tprecision\tf1')
 
-
-        for roof_type in utils.ROOF_TYPES:
-            detection_num = self.detections.total_detection_num[roof_type]
-            true_pos = self.detections.true_positive_num[roof_type]
-            false_pos = self.detections.false_positive_num[roof_type]
-            cur_type_roofs = self.detections.roof_num[roof_type] 
-
-            if detection_num > 0 and cur_type_roofs > 0:
-                recall = float(true_pos) / cur_type_roofs 
-                precision = float(true_pos) / detection_num
-                if precision+recall > 0:
-                    F1 = (2.*precision*recall)/(precision+recall)
-                else:
-                    F1 = 0
-            else:
-                recall = precision = F1 = 0
-            if stage is None:
-                log_to_file.append('{}\t{}\t{}\t{}\t{}\t{}\t{}'.format(roof_type, cur_type_roofs, self.detections.total_time, detection_num, recall, precision,F1)) 
-            else:
-                log_to_file.append('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}'.format(stage, roof_type, cur_type_roofs, self.detections.total_time, detection_num, recall, precision,F1)) 
-
-        log = '\n'.join(log_to_file)
-        with open(self.out_path+report_name, 'a') as report:
-            report.write(log)
- 
 
 
 
@@ -431,6 +379,15 @@ class Evaluation(object):
 
         cv2.imwrite('{0}{1}{2}.jpg'.format(self.out_path, img_name[:-4], fname), img)
 
+
+
+    def pickle_detections(self): 
+        file_name = 'TP{tp}_FP{fp}_{method}_{foldername}.pickle'.format( 
+                        tp=len(self.true_positive_coords['metal'])+len(self.true_positive_coords['thatch']), 
+                        fp=len(self.false_positive_coords['metal'])+len(self.false_positive_coords['thatch']),
+                        method=self.method, foldername=self.folder_name[:-1])
+        with open(utils.TRAINING_NEURAL_PATH+file_name, 'wb') as f:
+            pickle.dump(self.detections, f)
 
 
     def get_patch_mask(self, rows=None, cols=None, detections=None):
