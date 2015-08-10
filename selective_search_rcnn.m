@@ -20,7 +20,7 @@ if(~exist('mexFelzenSegmentIndex'))
 end
 
 % Configure
-im_width = 500;
+im_width = 1200;
 
 % Parameters. Note that this controls the number of hierarchical
 % segmentations which are combined.
@@ -35,7 +35,7 @@ simFunctionHandles = {@SSSimColourTextureSizeFillOrig, ...
 % Thresholds for the Felzenszwalb and Huttenlocher segmentation algorithm.
 % Note that by default, we set minSize = k, and sigma = 0.8.
 % controls size of segments of initial segmentation.
-ks = [50 100 150 300];
+ks = [100 150 200 300];
 sigma = 0.8;
 
 % After segmentation, filter out boxes which have a width/height smaller

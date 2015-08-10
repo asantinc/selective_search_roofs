@@ -37,7 +37,12 @@ def get_windows(image_fnames, script_dirname, cmd='selective_search', k=200, sca
     f, output_filename = tempfile.mkstemp(suffix='.mat')
     os.close(f)
     fnames_cell = '{' + ','.join("'{}'".format(x) for x in image_fnames) + '}'
-    command = "{}({}, '{}', {}, {})".format(cmd, fnames_cell, output_filename, k, scale)
+    if cmd == 'selective_search':
+        command = "{}({}, '{}', {}, {})".format(cmd, fnames_cell, output_filename, k, scale)
+    elif cmd == 'selective_search_rcnn':
+        command = "{}({}, '{}')".format(cmd, fnames_cell, output_filename)
+    else:
+        raise ValueError('Unknown MATLAB command issues by python script')
     print(command)
 
     # Execute command in MATLAB.
@@ -192,7 +197,7 @@ def copy_images(data_fold):
 
 def main(): 
     script_dirname = os.path.abspath(os.path.dirname(__file__))
-    output_patches = True
+    output_patches = False 
     fold = utils.TRAINING if output_patches else utils.VALIDATION
     
     #only use this path to get the names of the files you want to use
@@ -205,12 +210,17 @@ def main():
     #get the proposals
     k, scale = get_parameters()
     sim = 'all'
-    color = 'all'
-    folder_name = 'k{}_scale{}_sim{}_color{}/'.format(k, scale, sim, color)
+    color = 'hsv'
+    cmd = 'selective_search'
+    if cmd == 'selective_search':
+        folder_name = 'k{}_scale{}_sim{}_color{}_FIXING/'.format(k, scale, sim, color)
+    else:
+        folder_name = 'selectiveRCNN/'
     print 'Folder name is: {}'.format(folder_name)
 
     with Timer() as t:
-        boxes = get_windows(image_filenames, script_dirname, k=k, scale=scale)
+        boxes = get_windows(image_filenames, script_dirname, cmd=cmd, k=k, scale=scale)
+    print 'Time to process {}'.format(t.secs)
 
     detections = Detections()
     detections.total_time = t.secs
